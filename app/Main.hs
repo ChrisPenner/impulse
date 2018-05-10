@@ -4,6 +4,7 @@ import Brick
 import Brick.BChan
 import Control.Concurrent
 import Control.Monad
+import Data.Default
 import Graphics.Vty as V
 import Lib
 
@@ -15,7 +16,7 @@ main = do
     forever $ do
       writeBChan chan Tick
       threadDelay 100000
-  customMain (V.mkVty V.defaultConfig) (Just chan) app (AppState 0 0)
+  customMain (V.mkVty V.defaultConfig) (Just chan) app def
 
 app :: App AppState Tick ()
 app =

@@ -27,6 +27,7 @@ dependencies:
 - containers
 - brick
 - vty
+- data-default
 
 library:
   source-dirs: src
