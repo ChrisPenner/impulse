@@ -8,19 +8,20 @@ import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Border.Style as BS
 import Control.Lens
 import Data.Default
+import Data.Fixed
 import Graphics.Vty.Input.Events
 
 data AppState = AppState
-  { _vx :: Float
-  , _vy :: Float
+  { _v :: Float
   , _x :: Float
   , _y :: Float
+  , _theta :: Float
   } deriving (Show, Eq)
 
 makeLenses ''AppState
 
 instance Default AppState where
-  def = AppState {_vx = 0, _vy = 0, _x = 0, _y = 0}
+  def = AppState {_v = 0, _x = 0, _y = 0, _theta = 0}
 
 data Tick =
   Tick
@@ -28,26 +29,24 @@ data Tick =
 handleEvent :: AppState -> BrickEvent () Tick -> EventM () (Next AppState)
 handleEvent s (AppEvent Tick) = continue $ tick s
 handleEvent s (VtyEvent (EvKey (KChar 'q') _)) = halt s
-handleEvent s (VtyEvent (EvKey KUp _)) = continue (s & vy .~ 2)
-handleEvent s (VtyEvent (EvKey KRight _)) = continue (s & vx .~ 3)
-handleEvent s (VtyEvent (EvKey KUpLeft _)) = continue (s & vy .~ 2 & vx .~ (-3))
-handleEvent s (VtyEvent (EvKey KUpRight _)) = continue (s & vy .~ 2 & vx .~ 3)
-handleEvent s (VtyEvent (EvKey KLeft _)) = continue (s & vx .~ (-3))
+handleEvent s (VtyEvent (EvKey KUp _)) = continue (s & v +~ 0.1)
+handleEvent s (VtyEvent (EvKey KRight _)) = continue (s & theta +~ (-0.1))
+handleEvent s (VtyEvent (EvKey KLeft _)) = continue (s & theta +~ 0.1)
 handleEvent s _ = continue s
 
 tick :: AppState -> AppState
-tick s = s & gravity & moveY & moveX & limitY & friction & stop
+tick s = s & moveX & moveY & wrapY & wrapX & stop
   where
-    gravity = vy %~ subtract 0.5
-    friction = vx *~ 0.7
+    moveY = y +~ sin (s ^. theta) * (s ^. v)
+    moveX = x +~ cos (s ^. theta) * (s ^. v)
+    friction = v *~ 0.9
     stop =
-      vx %~ \vx' ->
-        if abs vx' < 0.01
+      v %~ \v' ->
+        if abs v' < 0.01
           then 0
-          else vx'
-    moveY = y +~ (s ^. vy)
-    moveX = x +~ (s ^. vx)
-    limitY = y %~ max 0
+          else v'
+    wrapX = y %~ (`mod'` fromIntegral gridHeight)
+    wrapY = x %~ (`mod'` fromIntegral gridWidth)
 
 initApp :: AppState -> EventM n AppState
 initApp s = return s
@@ -56,7 +55,7 @@ renderApp :: AppState -> [Widget ()]
 renderApp = pure . renderBouncer
 
 gridHeight :: Int
-gridHeight = 10
+gridHeight = 30
 
 gridWidth :: Int
 gridWidth = 100
